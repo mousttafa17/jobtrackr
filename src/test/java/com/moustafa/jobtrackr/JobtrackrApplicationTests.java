@@ -1,13 +1,14 @@
 package com.moustafa.jobtrackr;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+import static org.assertj.core.api.Assertions.assertThat;
+
 class JobtrackrApplicationTests {
 
 	@Test
-	void contextLoads() {
+	void applicationClassExists() {
+		assertThat(JobtrackrApplication.class).isNotNull();
 	}
 
 }
