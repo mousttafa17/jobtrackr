@@ -28,4 +28,5 @@ postgres-data/
 pgadmin-data/
 
 # Spring Boot
-spring.log
+spring.loggit init
+git branch -M main
