@@ -5,7 +5,7 @@ import com.moustafa.jobtrackr.application.dto.JobApplicationFilter;
 import com.moustafa.jobtrackr.application.dto.JobApplicationResponse;
 import com.moustafa.jobtrackr.common.exception.BadRequestException;
 import com.moustafa.jobtrackr.common.response.PageResponse;
-import com.moustafa.jobtrackr.user.DefaultUserProvider;
+import com.moustafa.jobtrackr.security.AuthenticatedUserProvider;
 import com.moustafa.jobtrackr.user.Role;
 import com.moustafa.jobtrackr.user.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,14 +39,14 @@ class JobApplicationServiceTest {
     private JobApplicationRepository jobApplicationRepository;
 
     @Mock
-    private DefaultUserProvider defaultUserProvider;
+    private AuthenticatedUserProvider authenticatedUserProvider;
 
     private JobApplicationService jobApplicationService;
     private User user;
 
     @BeforeEach
     void setUp() {
-        jobApplicationService = new JobApplicationService(jobApplicationRepository, defaultUserProvider);
+        jobApplicationService = new JobApplicationService(jobApplicationRepository, authenticatedUserProvider);
         user = User.builder()
                 .id(1L)
                 .fullName("Demo User")
@@ -71,7 +71,7 @@ class JobApplicationServiceTest {
                 .updatedAt(Instant.parse("2026-05-28T05:00:00Z"))
                 .build();
 
-        when(defaultUserProvider.getCurrentUser()).thenReturn(user);
+        when(authenticatedUserProvider.getCurrentUser()).thenReturn(user);
         when(jobApplicationRepository.findAll(anyJobApplicationSpecification(), eq(pageable)))
                 .thenReturn(new PageImpl<>(List.of(application), pageable, 1));
 
@@ -98,7 +98,7 @@ class JobApplicationServiceTest {
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Unsupported sort field: user.passwordHash");
 
-        verify(defaultUserProvider, never()).getCurrentUser();
+        verify(authenticatedUserProvider, never()).getCurrentUser();
         verify(jobApplicationRepository, never()).findAll(anyJobApplicationSpecification(), eq(pageable));
     }
 
@@ -120,7 +120,7 @@ class JobApplicationServiceTest {
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Minimum salary cannot be greater than maximum salary");
 
-        verify(defaultUserProvider, never()).getCurrentUser();
+        verify(authenticatedUserProvider, never()).getCurrentUser();
         verify(jobApplicationRepository, never()).save(any(JobApplication.class));
     }
 

@@ -8,7 +8,7 @@ import com.moustafa.jobtrackr.application.dto.UpdateJobApplicationRequest;
 import com.moustafa.jobtrackr.common.exception.BadRequestException;
 import com.moustafa.jobtrackr.common.exception.ResourceNotFoundException;
 import com.moustafa.jobtrackr.common.response.PageResponse;
-import com.moustafa.jobtrackr.user.DefaultUserProvider;
+import com.moustafa.jobtrackr.security.AuthenticatedUserProvider;
 import com.moustafa.jobtrackr.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -33,7 +33,7 @@ public class JobApplicationService {
     );
 
     private final JobApplicationRepository jobApplicationRepository;
-    private final DefaultUserProvider defaultUserProvider;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
 
     @Transactional
     public PageResponse<JobApplicationResponse> findAllForCurrentUser(
@@ -42,7 +42,7 @@ public class JobApplicationService {
     ) {
         validateSort(pageable);
 
-        User user = defaultUserProvider.getCurrentUser();
+        User user = authenticatedUserProvider.getCurrentUser();
         Specification<JobApplication> specification = Specification.allOf(
                 JobApplicationSpecifications.belongsTo(user),
                 JobApplicationSpecifications.hasStatus(filter.status()),
@@ -64,7 +64,7 @@ public class JobApplicationService {
         validateSalaryRange(request.salaryMin(), request.salaryMax());
 
         JobApplication application = JobApplication.builder()
-                .user(defaultUserProvider.getCurrentUser())
+                .user(authenticatedUserProvider.getCurrentUser())
                 .companyName(request.companyName())
                 .jobTitle(request.jobTitle())
                 .location(request.location())
@@ -110,7 +110,7 @@ public class JobApplicationService {
     }
 
     private JobApplication getOwnedApplication(Long id) {
-        User user = defaultUserProvider.getCurrentUser();
+        User user = authenticatedUserProvider.getCurrentUser();
         return jobApplicationRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new ResourceNotFoundException("Job application not found"));
     }
