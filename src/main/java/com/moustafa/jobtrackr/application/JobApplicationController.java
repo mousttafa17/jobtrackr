@@ -1,11 +1,16 @@
 package com.moustafa.jobtrackr.application;
 
 import com.moustafa.jobtrackr.application.dto.CreateJobApplicationRequest;
+import com.moustafa.jobtrackr.application.dto.JobApplicationFilter;
 import com.moustafa.jobtrackr.application.dto.JobApplicationResponse;
 import com.moustafa.jobtrackr.application.dto.UpdateApplicationStatusRequest;
 import com.moustafa.jobtrackr.application.dto.UpdateJobApplicationRequest;
+import com.moustafa.jobtrackr.common.response.PageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,8 +23,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/applications")
 @RequiredArgsConstructor
@@ -28,8 +31,11 @@ public class JobApplicationController {
     private final JobApplicationService jobApplicationService;
 
     @GetMapping
-    public List<JobApplicationResponse> findAll() {
-        return jobApplicationService.findAllForCurrentUser();
+    public PageResponse<JobApplicationResponse> findAll(
+            JobApplicationFilter filter,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return jobApplicationService.findAllForCurrentUser(filter, pageable);
     }
 
     @PostMapping

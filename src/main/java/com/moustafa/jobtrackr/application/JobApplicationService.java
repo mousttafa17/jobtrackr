@@ -1,34 +1,57 @@
 package com.moustafa.jobtrackr.application;
 
 import com.moustafa.jobtrackr.application.dto.CreateJobApplicationRequest;
+import com.moustafa.jobtrackr.application.dto.JobApplicationFilter;
 import com.moustafa.jobtrackr.application.dto.JobApplicationResponse;
 import com.moustafa.jobtrackr.application.dto.UpdateApplicationStatusRequest;
 import com.moustafa.jobtrackr.application.dto.UpdateJobApplicationRequest;
 import com.moustafa.jobtrackr.common.exception.BadRequestException;
 import com.moustafa.jobtrackr.common.exception.ResourceNotFoundException;
+import com.moustafa.jobtrackr.common.response.PageResponse;
 import com.moustafa.jobtrackr.user.DefaultUserProvider;
 import com.moustafa.jobtrackr.user.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class JobApplicationService {
 
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "createdAt",
+            "updatedAt",
+            "applicationDate",
+            "companyName",
+            "jobTitle",
+            "status"
+    );
+
     private final JobApplicationRepository jobApplicationRepository;
     private final DefaultUserProvider defaultUserProvider;
 
     @Transactional
-    public List<JobApplicationResponse> findAllForCurrentUser() {
+    public PageResponse<JobApplicationResponse> findAllForCurrentUser(
+            JobApplicationFilter filter,
+            Pageable pageable
+    ) {
+        validateSort(pageable);
+
         User user = defaultUserProvider.getCurrentUser();
-        return jobApplicationRepository.findByUserOrderByCreatedAtDesc(user)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        Specification<JobApplication> specification = Specification.allOf(
+                JobApplicationSpecifications.belongsTo(user),
+                JobApplicationSpecifications.hasStatus(filter.status()),
+                JobApplicationSpecifications.companyContains(filter.company()),
+                JobApplicationSpecifications.searchContains(filter.search())
+        );
+
+        return PageResponse.from(jobApplicationRepository.findAll(specification, pageable)
+                .map(this::toResponse));
     }
 
     @Transactional
@@ -96,6 +119,14 @@ public class JobApplicationService {
         if (salaryMin != null && salaryMax != null && salaryMin.compareTo(salaryMax) > 0) {
             throw new BadRequestException("Minimum salary cannot be greater than maximum salary");
         }
+    }
+
+    private void validateSort(Pageable pageable) {
+        pageable.getSort().forEach(order -> {
+            if (!ALLOWED_SORT_FIELDS.contains(order.getProperty())) {
+                throw new BadRequestException("Unsupported sort field: " + order.getProperty());
+            }
+        });
     }
 
     private JobApplicationResponse toResponse(JobApplication application) {
