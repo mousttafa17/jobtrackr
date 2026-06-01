@@ -131,6 +131,16 @@ class ApiIntegrationTest {
                 token,
                 Map.of("content", "Recruiter said feedback should arrive next week.")
         );
+        Long documentId = postForId(
+                "/api/applications/" + applicationId + "/documents",
+                token,
+                Map.of(
+                        "name", "Google backend resume",
+                        "type", "RESUME",
+                        "url", "https://example.com/google-resume.pdf",
+                        "notes", "Tailored to backend role"
+                )
+        );
 
         assertThat(idsFrom(getList("/api/applications/" + applicationId + "/interviews", token)))
                 .contains(interviewId);
@@ -138,6 +148,8 @@ class ApiIntegrationTest {
                 .contains(taskId);
         assertThat(idsFrom(getList("/api/applications/" + applicationId + "/notes", token)))
                 .contains(noteId);
+        assertThat(idsFrom(getList("/api/applications/" + applicationId + "/documents", token)))
+                .contains(documentId);
 
         ResponseEntity<Map> completedTaskResponse = restTemplate.exchange(
                 "/api/tasks/" + taskId + "/complete",
@@ -148,6 +160,48 @@ class ApiIntegrationTest {
 
         assertThat(completedTaskResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(completedTaskResponse.getBody().get("completed")).isEqualTo(true);
+    }
+
+    @Test
+    void childResourcesEnforceApplicationOwnership() {
+        String ownerToken = tokenForNewUser("Nested Owner");
+        Long applicationId = createApplication(ownerToken, "Netflix", "Platform Engineer");
+
+        String otherUserToken = tokenForNewUser("Nested Other User");
+
+        assertNestedCreateIsNotFound(
+                "/api/applications/" + applicationId + "/interviews",
+                otherUserToken,
+                Map.of(
+                        "type", "TECHNICAL",
+                        "scheduledAt", "2026-06-10T15:00:00Z"
+                )
+        );
+        assertNestedCreateIsNotFound(
+                "/api/applications/" + applicationId + "/tasks",
+                otherUserToken,
+                Map.of("title", "Send follow-up")
+        );
+        assertNestedCreateIsNotFound(
+                "/api/applications/" + applicationId + "/notes",
+                otherUserToken,
+                Map.of("content", "Private owner note")
+        );
+        assertNestedCreateIsNotFound(
+                "/api/applications/" + applicationId + "/documents",
+                otherUserToken,
+                Map.of(
+                        "name", "Private resume",
+                        "type", "RESUME",
+                        "url", "https://example.com/private-resume.pdf"
+                )
+        );
+
+        assertNestedListIsNotFound("/api/applications/" + applicationId + "/interviews", otherUserToken);
+        assertNestedListIsNotFound("/api/applications/" + applicationId + "/tasks", otherUserToken);
+        assertNestedListIsNotFound("/api/applications/" + applicationId + "/notes", otherUserToken);
+        assertNestedListIsNotFound("/api/applications/" + applicationId + "/documents", otherUserToken);
+        assertNestedListIsNotFound("/api/applications/" + applicationId + "/status-history", otherUserToken);
     }
 
     @Test
@@ -199,6 +253,28 @@ class ApiIntegrationTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         return ((Number) response.getBody().get("id")).longValue();
+    }
+
+    private void assertNestedCreateIsNotFound(String path, String token, Map<String, Object> request) {
+        ResponseEntity<Map> response = restTemplate.exchange(
+                path,
+                HttpMethod.POST,
+                authenticatedRequest(token, request),
+                Map.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    private void assertNestedListIsNotFound(String path, String token) {
+        ResponseEntity<Map> response = restTemplate.exchange(
+                path,
+                HttpMethod.GET,
+                authenticatedRequest(token),
+                Map.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     private List<?> getList(String path, String token) {

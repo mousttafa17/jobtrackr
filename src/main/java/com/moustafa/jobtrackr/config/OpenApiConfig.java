@@ -20,7 +20,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("JobTrackr API")
                         .version("v1")
-                        .description("REST API for tracking job applications, interviews, tasks, and notes.")
+                        .description("REST API for tracking job applications, interviews, tasks, notes, documents, and status history.")
                         .contact(new Contact()
                                 .name("Moustafa Marzouk")))
                 .addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH))

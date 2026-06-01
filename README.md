@@ -1,6 +1,6 @@
 # JobTrackr
 
-JobTrackr is a Spring Boot backend API for tracking job applications, interviews, follow-up tasks, and notes. It is built as a portfolio-ready backend project that demonstrates secure REST API design, PostgreSQL persistence, JWT authentication, owner-based authorization, database migrations, OpenAPI documentation, and Docker-backed integration testing.
+JobTrackr is a Spring Boot backend API for tracking job applications, interviews, follow-up tasks, notes, and document links. It is built as a portfolio-ready backend project that demonstrates secure REST API design, PostgreSQL persistence, JWT authentication, owner-based authorization, database migrations, OpenAPI documentation, and Docker-backed integration testing.
 
 ## Tech Stack
 
@@ -30,6 +30,7 @@ JobTrackr is a Spring Boot backend API for tracking job applications, interviews
 - Interview management per job application
 - Task/reminder management per job application
 - Notes per job application
+- Document links per job application
 - Global exception handling with consistent API error responses
 - DTO-based request/response models
 - Flyway-managed PostgreSQL schema
@@ -52,6 +53,7 @@ com.moustafa.jobtrackr
 +-- auth
 +-- common
 +-- config
++-- document
 +-- health
 +-- interview
 +-- note
@@ -195,6 +197,31 @@ curl "http://localhost:8080/api/applications?status=INTERVIEW&search=backend" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+Filter and sort applications together:
+
+```bash
+curl "http://localhost:8080/api/applications?status=INTERVIEW&company=Google&page=0&size=10&sort=applicationDate,desc" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Search applications across company, title, location, and notes:
+
+```bash
+curl "http://localhost:8080/api/applications?search=backend&sort=companyName,asc" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Supported application sort fields:
+
+```txt
+createdAt
+updatedAt
+applicationDate
+companyName
+jobTitle
+status
+```
+
 Set an application id:
 
 ```bash
@@ -248,6 +275,27 @@ curl -X POST http://localhost:8080/api/applications/$APP_ID/notes \
   -d '{
     "content":"Recruiter said feedback should arrive next week."
   }'
+```
+
+Create a document link:
+
+```bash
+curl -X POST http://localhost:8080/api/applications/$APP_ID/documents \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Google backend resume",
+    "type":"RESUME",
+    "url":"https://example.com/google-resume.pdf",
+    "notes":"Tailored resume emphasizing Java and Spring Boot."
+  }'
+```
+
+List document links:
+
+```bash
+curl http://localhost:8080/api/applications/$APP_ID/documents \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ## API Endpoints
@@ -304,6 +352,14 @@ POST   /api/applications/{applicationId}/notes
 DELETE /api/notes/{id}
 ```
 
+### Documents
+
+```txt
+GET    /api/applications/{applicationId}/documents
+POST   /api/applications/{applicationId}/documents
+DELETE /api/documents/{id}
+```
+
 ## Swagger / OpenAPI
 
 Start the app, then open:
@@ -336,6 +392,8 @@ Current migration:
 
 ```txt
 V1__create_initial_schema.sql
+V2__create_application_status_history.sql
+V3__create_documents.sql
 ```
 
 Hibernate is configured with:
@@ -381,7 +439,7 @@ export JWT_SECRET="replace-with-a-long-random-secret"
 
 ```txt
 JobTrackr - Spring Boot Job Application Management API
-- Built a secure REST API for tracking job applications, interviews, tasks, and notes using Spring Boot and PostgreSQL.
+- Built a secure REST API for tracking job applications, interviews, tasks, notes, and document links using Spring Boot and PostgreSQL.
 - Implemented JWT authentication, BCrypt password hashing, stateless Spring Security, and owner-based authorization.
 - Designed relational JPA entities with Flyway-managed PostgreSQL migrations and DTO validation.
 - Tracked application status transitions with historical audit records.
@@ -391,10 +449,8 @@ JobTrackr - Spring Boot Job Application Management API
 
 ## Future Improvements
 
-- GitHub Actions CI
-- More detailed OpenAPI annotations
+- File upload/storage for documents
 - Task update and reopen endpoints
 - Note update endpoint
-- Application status history
 - Role-based admin endpoints
 - React frontend dashboard

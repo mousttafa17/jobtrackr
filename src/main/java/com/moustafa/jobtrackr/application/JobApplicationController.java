@@ -8,9 +8,11 @@ import com.moustafa.jobtrackr.application.dto.UpdateApplicationStatusRequest;
 import com.moustafa.jobtrackr.application.dto.UpdateJobApplicationRequest;
 import com.moustafa.jobtrackr.common.response.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.domain.Sort;
@@ -39,7 +41,11 @@ public class JobApplicationController {
     @Operation(summary = "List job applications", description = "Returns the current user's applications with optional filtering, pagination, and sorting.")
     @GetMapping
     public PageResponse<JobApplicationResponse> findAll(
-            JobApplicationFilter filter,
+            @ParameterObject JobApplicationFilter filter,
+            @Parameter(
+                    description = "Pagination and sorting. Example: page=0&size=10&sort=applicationDate,desc"
+            )
+            @ParameterObject
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return jobApplicationService.findAllForCurrentUser(filter, pageable);
