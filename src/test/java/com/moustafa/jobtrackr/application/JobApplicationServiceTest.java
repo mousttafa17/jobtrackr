@@ -3,6 +3,7 @@ package com.moustafa.jobtrackr.application;
 import com.moustafa.jobtrackr.application.dto.CreateJobApplicationRequest;
 import com.moustafa.jobtrackr.application.dto.JobApplicationFilter;
 import com.moustafa.jobtrackr.application.dto.JobApplicationResponse;
+import com.moustafa.jobtrackr.application.dto.UpdateApplicationStatusRequest;
 import com.moustafa.jobtrackr.common.exception.BadRequestException;
 import com.moustafa.jobtrackr.common.response.PageResponse;
 import com.moustafa.jobtrackr.security.AuthenticatedUserProvider;
@@ -39,6 +40,9 @@ class JobApplicationServiceTest {
     private JobApplicationRepository jobApplicationRepository;
 
     @Mock
+    private JobApplicationStatusHistoryRepository statusHistoryRepository;
+
+    @Mock
     private AuthenticatedUserProvider authenticatedUserProvider;
 
     private JobApplicationService jobApplicationService;
@@ -46,7 +50,11 @@ class JobApplicationServiceTest {
 
     @BeforeEach
     void setUp() {
-        jobApplicationService = new JobApplicationService(jobApplicationRepository, authenticatedUserProvider);
+        jobApplicationService = new JobApplicationService(
+                jobApplicationRepository,
+                statusHistoryRepository,
+                authenticatedUserProvider
+        );
         user = User.builder()
                 .id(1L)
                 .fullName("Demo User")
@@ -122,6 +130,57 @@ class JobApplicationServiceTest {
 
         verify(authenticatedUserProvider, never()).getCurrentUser();
         verify(jobApplicationRepository, never()).save(any(JobApplication.class));
+        verify(statusHistoryRepository, never()).save(any(JobApplicationStatusHistory.class));
+    }
+
+    @Test
+    void createRecordsInitialStatusHistory() {
+        CreateJobApplicationRequest request = new CreateJobApplicationRequest(
+                "OpenAI",
+                "Backend Engineer",
+                "Remote",
+                null,
+                null,
+                "https://example.com/jobs/backend",
+                ApplicationStatus.INTERVIEW,
+                LocalDate.of(2026, 5, 28),
+                null
+        );
+
+        when(authenticatedUserProvider.getCurrentUser()).thenReturn(user);
+        when(jobApplicationRepository.save(any(JobApplication.class))).thenAnswer(invocation -> {
+            JobApplication application = invocation.getArgument(0);
+            application.setId(10L);
+            application.setCreatedAt(Instant.parse("2026-05-28T05:00:00Z"));
+            application.setUpdatedAt(Instant.parse("2026-05-28T05:00:00Z"));
+            return application;
+        });
+
+        JobApplicationResponse response = jobApplicationService.create(request);
+
+        assertThat(response.status()).isEqualTo(ApplicationStatus.INTERVIEW);
+        verify(statusHistoryRepository).save(any(JobApplicationStatusHistory.class));
+    }
+
+    @Test
+    void updateStatusRecordsStatusTransition() {
+        JobApplication application = JobApplication.builder()
+                .id(10L)
+                .user(user)
+                .companyName("OpenAI")
+                .jobTitle("Backend Engineer")
+                .status(ApplicationStatus.APPLIED)
+                .createdAt(Instant.parse("2026-05-28T05:00:00Z"))
+                .updatedAt(Instant.parse("2026-05-28T05:00:00Z"))
+                .build();
+
+        when(authenticatedUserProvider.getCurrentUser()).thenReturn(user);
+        when(jobApplicationRepository.findByIdAndUser(10L, user)).thenReturn(java.util.Optional.of(application));
+        when(jobApplicationRepository.saveAndFlush(application)).thenReturn(application);
+
+        jobApplicationService.updateStatus(10L, new UpdateApplicationStatusRequest(ApplicationStatus.INTERVIEW));
+
+        verify(statusHistoryRepository).save(any(JobApplicationStatusHistory.class));
     }
 
     private Specification<JobApplication> anyJobApplicationSpecification() {

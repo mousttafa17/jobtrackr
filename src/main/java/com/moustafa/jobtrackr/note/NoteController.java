@@ -2,6 +2,8 @@ package com.moustafa.jobtrackr.note;
 
 import com.moustafa.jobtrackr.note.dto.CreateNoteRequest;
 import com.moustafa.jobtrackr.note.dto.NoteResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,15 +19,18 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@Tag(name = "Notes", description = "Manage notes for job applications")
 public class NoteController {
 
     private final NoteService noteService;
 
+    @Operation(summary = "List notes for a job application")
     @GetMapping("/api/applications/{applicationId}/notes")
     public List<NoteResponse> findAllForApplication(@PathVariable Long applicationId) {
         return noteService.findAllForApplication(applicationId);
     }
 
+    @Operation(summary = "Create a note for a job application")
     @PostMapping("/api/applications/{applicationId}/notes")
     @ResponseStatus(HttpStatus.CREATED)
     public NoteResponse create(
@@ -35,6 +40,7 @@ public class NoteController {
         return noteService.create(applicationId, request);
     }
 
+    @Operation(summary = "Delete a note")
     @DeleteMapping("/api/notes/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {

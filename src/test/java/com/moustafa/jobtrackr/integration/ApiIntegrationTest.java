@@ -80,6 +80,30 @@ class ApiIntegrationTest {
     }
 
     @Test
+    void statusHistoryTracksApplicationStatusChanges() {
+        String token = tokenForNewUser("Status History Tester");
+        Long applicationId = createApplication(token, "Stripe", "Java Engineer");
+
+        ResponseEntity<Map> statusResponse = restTemplate.exchange(
+                "/api/applications/" + applicationId + "/status",
+                HttpMethod.PATCH,
+                authenticatedRequest(token, Map.of("status", "OFFER")),
+                Map.class
+        );
+
+        assertThat(statusResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(statusResponse.getBody().get("status")).isEqualTo("OFFER");
+
+        List<?> history = getList("/api/applications/" + applicationId + "/status-history", token);
+
+        assertThat(history).hasSize(2);
+        assertThat(castMap(history.get(0)).get("oldStatus")).isEqualTo("INTERVIEW");
+        assertThat(castMap(history.get(0)).get("newStatus")).isEqualTo("OFFER");
+        assertThat(castMap(history.get(1)).get("oldStatus")).isNull();
+        assertThat(castMap(history.get(1)).get("newStatus")).isEqualTo("INTERVIEW");
+    }
+
+    @Test
     void authenticatedUserCanManageApplicationChildResources() {
         String token = tokenForNewUser("Child Resource Tester");
         Long applicationId = createApplication(token, "Google", "Backend Engineer");

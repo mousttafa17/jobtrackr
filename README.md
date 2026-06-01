@@ -25,6 +25,7 @@ JobTrackr is a Spring Boot backend API for tracking job applications, interviews
 - Stateless Spring Security configuration
 - Authenticated user ownership checks for protected resources
 - Job application CRUD
+- Application status history
 - Filtering, pagination, and sorting for applications
 - Interview management per job application
 - Task/reminder management per job application
@@ -272,6 +273,7 @@ GET    /api/applications
 POST   /api/applications
 GET    /api/applications/{id}
 PUT    /api/applications/{id}
+GET    /api/applications/{id}/status-history
 PATCH  /api/applications/{id}/status
 DELETE /api/applications/{id}
 ```
@@ -382,6 +384,7 @@ JobTrackr - Spring Boot Job Application Management API
 - Built a secure REST API for tracking job applications, interviews, tasks, and notes using Spring Boot and PostgreSQL.
 - Implemented JWT authentication, BCrypt password hashing, stateless Spring Security, and owner-based authorization.
 - Designed relational JPA entities with Flyway-managed PostgreSQL migrations and DTO validation.
+- Tracked application status transitions with historical audit records.
 - Added filtering, pagination, sorting, global exception handling, and Swagger/OpenAPI documentation.
 - Wrote unit and Docker-backed integration tests using JUnit, Mockito, and Testcontainers.
 ```

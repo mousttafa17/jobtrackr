@@ -3,6 +3,7 @@ package com.moustafa.jobtrackr.application;
 import com.moustafa.jobtrackr.application.dto.CreateJobApplicationRequest;
 import com.moustafa.jobtrackr.application.dto.JobApplicationFilter;
 import com.moustafa.jobtrackr.application.dto.JobApplicationResponse;
+import com.moustafa.jobtrackr.application.dto.JobApplicationStatusHistoryResponse;
 import com.moustafa.jobtrackr.application.dto.UpdateApplicationStatusRequest;
 import com.moustafa.jobtrackr.application.dto.UpdateJobApplicationRequest;
 import com.moustafa.jobtrackr.common.exception.BadRequestException;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -33,6 +35,7 @@ public class JobApplicationService {
     );
 
     private final JobApplicationRepository jobApplicationRepository;
+    private final JobApplicationStatusHistoryRepository statusHistoryRepository;
     private final AuthenticatedUserProvider authenticatedUserProvider;
 
     @Transactional
@@ -59,10 +62,24 @@ public class JobApplicationService {
         return toResponse(getOwnedApplication(id));
     }
 
+    @Transactional(readOnly = true)
+    public List<JobApplicationStatusHistoryResponse> findStatusHistory(Long id) {
+        User user = authenticatedUserProvider.getCurrentUser();
+        if (jobApplicationRepository.findByIdAndUser(id, user).isEmpty()) {
+            throw new ResourceNotFoundException("Job application not found");
+        }
+
+        return statusHistoryRepository.findAllByApplication_IdAndApplication_UserOrderByChangedAtDesc(id, user)
+                .stream()
+                .map(this::toStatusHistoryResponse)
+                .toList();
+    }
+
     @Transactional
     public JobApplicationResponse create(CreateJobApplicationRequest request) {
         validateSalaryRange(request.salaryMin(), request.salaryMax());
 
+        ApplicationStatus status = request.status() == null ? ApplicationStatus.APPLIED : request.status();
         JobApplication application = JobApplication.builder()
                 .user(authenticatedUserProvider.getCurrentUser())
                 .companyName(request.companyName())
@@ -71,12 +88,14 @@ public class JobApplicationService {
                 .salaryMin(request.salaryMin())
                 .salaryMax(request.salaryMax())
                 .jobLink(request.jobLink())
-                .status(request.status())
+                .status(status)
                 .applicationDate(request.applicationDate())
                 .notes(request.notes())
                 .build();
 
-        return toResponse(jobApplicationRepository.save(application));
+        JobApplication savedApplication = jobApplicationRepository.save(application);
+        recordStatusChange(savedApplication, null, status);
+        return toResponse(savedApplication);
     }
 
     @Transactional
@@ -84,24 +103,32 @@ public class JobApplicationService {
         validateSalaryRange(request.salaryMin(), request.salaryMax());
 
         JobApplication application = getOwnedApplication(id);
+        ApplicationStatus oldStatus = application.getStatus();
+        ApplicationStatus newStatus = request.status() == null ? ApplicationStatus.APPLIED : request.status();
+
         application.setCompanyName(request.companyName());
         application.setJobTitle(request.jobTitle());
         application.setLocation(request.location());
         application.setSalaryMin(request.salaryMin());
         application.setSalaryMax(request.salaryMax());
         application.setJobLink(request.jobLink());
-        application.setStatus(request.status() == null ? ApplicationStatus.APPLIED : request.status());
+        application.setStatus(newStatus);
         application.setApplicationDate(request.applicationDate());
         application.setNotes(request.notes());
 
-        return toResponse(jobApplicationRepository.saveAndFlush(application));
+        JobApplication savedApplication = jobApplicationRepository.saveAndFlush(application);
+        recordStatusChangeIfChanged(savedApplication, oldStatus, newStatus);
+        return toResponse(savedApplication);
     }
 
     @Transactional
     public JobApplicationResponse updateStatus(Long id, UpdateApplicationStatusRequest request) {
         JobApplication application = getOwnedApplication(id);
+        ApplicationStatus oldStatus = application.getStatus();
         application.setStatus(request.status());
-        return toResponse(jobApplicationRepository.saveAndFlush(application));
+        JobApplication savedApplication = jobApplicationRepository.saveAndFlush(application);
+        recordStatusChangeIfChanged(savedApplication, oldStatus, request.status());
+        return toResponse(savedApplication);
     }
 
     @Transactional
@@ -129,6 +156,28 @@ public class JobApplicationService {
         });
     }
 
+    private void recordStatusChangeIfChanged(
+            JobApplication application,
+            ApplicationStatus oldStatus,
+            ApplicationStatus newStatus
+    ) {
+        if (oldStatus != newStatus) {
+            recordStatusChange(application, oldStatus, newStatus);
+        }
+    }
+
+    private void recordStatusChange(
+            JobApplication application,
+            ApplicationStatus oldStatus,
+            ApplicationStatus newStatus
+    ) {
+        statusHistoryRepository.save(JobApplicationStatusHistory.builder()
+                .application(application)
+                .oldStatus(oldStatus)
+                .newStatus(newStatus)
+                .build());
+    }
+
     private JobApplicationResponse toResponse(JobApplication application) {
         return new JobApplicationResponse(
                 application.getId(),
@@ -144,6 +193,16 @@ public class JobApplicationService {
                 application.getNotes(),
                 application.getCreatedAt(),
                 application.getUpdatedAt()
+        );
+    }
+
+    private JobApplicationStatusHistoryResponse toStatusHistoryResponse(JobApplicationStatusHistory history) {
+        return new JobApplicationStatusHistoryResponse(
+                history.getId(),
+                history.getApplication().getId(),
+                history.getOldStatus(),
+                history.getNewStatus(),
+                history.getChangedAt()
         );
     }
 }

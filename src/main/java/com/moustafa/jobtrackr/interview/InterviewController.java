@@ -3,6 +3,8 @@ package com.moustafa.jobtrackr.interview;
 import com.moustafa.jobtrackr.interview.dto.CreateInterviewRequest;
 import com.moustafa.jobtrackr.interview.dto.InterviewResponse;
 import com.moustafa.jobtrackr.interview.dto.UpdateInterviewRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,15 +21,18 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@Tag(name = "Interviews", description = "Manage interviews for job applications")
 public class InterviewController {
 
     private final InterviewService interviewService;
 
+    @Operation(summary = "List interviews for a job application")
     @GetMapping("/api/applications/{applicationId}/interviews")
     public List<InterviewResponse> findAllForApplication(@PathVariable Long applicationId) {
         return interviewService.findAllForApplication(applicationId);
     }
 
+    @Operation(summary = "Create an interview for a job application")
     @PostMapping("/api/applications/{applicationId}/interviews")
     @ResponseStatus(HttpStatus.CREATED)
     public InterviewResponse create(
@@ -37,6 +42,7 @@ public class InterviewController {
         return interviewService.create(applicationId, request);
     }
 
+    @Operation(summary = "Update an interview")
     @PutMapping("/api/interviews/{id}")
     public InterviewResponse update(
             @PathVariable Long id,
@@ -45,6 +51,7 @@ public class InterviewController {
         return interviewService.update(id, request);
     }
 
+    @Operation(summary = "Delete an interview")
     @DeleteMapping("/api/interviews/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
