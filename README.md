@@ -115,6 +115,8 @@ Password: admin
 mvn spring-boot:run
 ```
 
+The app defaults to the `dev` profile, which uses the Docker Compose PostgreSQL settings from `application-dev.properties`.
+
 The API runs at:
 
 ```txt
@@ -423,13 +425,34 @@ The first Testcontainers run may take longer because Docker needs to pull images
 
 ## Configuration
 
-Main config file:
+Profile-based config files:
 
 ```txt
 src/main/resources/application.properties
+src/main/resources/application-dev.properties
+src/main/resources/application-prod.properties
 ```
 
-JWT secret can be overridden with an environment variable:
+The base config contains shared settings. The `dev` profile contains local Docker defaults. The `prod` profile requires environment variables for database credentials and JWT signing.
+
+Example local environment file:
+
+```txt
+.env.example
+```
+
+Production environment variables:
+
+```bash
+export SPRING_PROFILES_ACTIVE=prod
+export DATABASE_URL="jdbc:postgresql://your-host:5432/jobtrackr_db"
+export DATABASE_USERNAME="jobtrackr_user"
+export DATABASE_PASSWORD="replace-with-a-secure-password"
+export JWT_SECRET="replace-with-a-long-random-secret"
+export JWT_EXPIRATION_MINUTES=60
+```
+
+For local development, you can override the default JWT secret without switching profiles:
 
 ```bash
 export JWT_SECRET="replace-with-a-long-random-secret"
