@@ -129,6 +129,33 @@ Health check:
 curl http://localhost:8080/api/health
 ```
 
+### Run the Frontend
+
+Install frontend dependencies:
+
+```bash
+cd frontend
+npm install
+```
+
+Start the Vite dev server:
+
+```bash
+npm run dev
+```
+
+The frontend runs at:
+
+```txt
+http://localhost:5173
+```
+
+The frontend uses this API base URL by default:
+
+```txt
+VITE_API_BASE_URL=http://localhost:8080
+```
+
 ## Authentication Flow
 
 Register a user:

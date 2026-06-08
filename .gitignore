@@ -5,6 +5,11 @@ target/
 *.war
 *.ear
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
 # Maven wrapper downloaded files
 .mvn/wrapper/maven-wrapper.jar
 
