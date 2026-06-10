@@ -16,8 +16,10 @@ import { createApplication, getApplications } from "../api/applicationsApi";
 import { useAuth } from "../auth/AuthContext";
 import { Button } from "../components/Button";
 import { InputField } from "../components/InputField";
+import { LoadingState } from "../components/LoadingState";
 import { SelectField } from "../components/SelectField";
 import { TextAreaField } from "../components/TextAreaField";
+import { useToast } from "../components/ToastProvider";
 import type {
   ApplicationFilters,
   ApplicationSortField,
@@ -83,6 +85,7 @@ const initialFormState: ApplicationFormState = {
 
 export function ApplicationsPage() {
   const { user, logout } = useAuth();
+  const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<ApplicationFilters>(defaultFilters);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -100,10 +103,13 @@ export function ApplicationsPage() {
       setForm(initialFormState);
       setFormError("");
       setIsCreateOpen(false);
+      showToast("Application added");
       void queryClient.invalidateQueries({ queryKey: ["applications"] });
     },
     onError: (error) => {
-      setFormError(getApiErrorMessage(error));
+      const message = getApiErrorMessage(error);
+      setFormError(message);
+      showToast(message, "error");
     },
   });
 
@@ -246,7 +252,7 @@ export function ApplicationsPage() {
               {applicationsQuery.isLoading && (
                 <tr>
                   <td colSpan={6} className="table-state">
-                    Loading applications...
+                    <LoadingState label="Loading applications..." />
                   </td>
                 </tr>
               )}

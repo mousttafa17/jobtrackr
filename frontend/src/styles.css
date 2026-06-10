@@ -165,6 +165,15 @@ a:hover {
   background: #dce9e2;
 }
 
+.button-danger {
+  color: #ffffff;
+  background: #9f3520;
+}
+
+.button-danger:hover:not(:disabled) {
+  background: #842b1a;
+}
+
 .form-error {
   border: 1px solid #e6b7aa;
   border-radius: 8px;
@@ -474,6 +483,41 @@ a:hover {
   gap: 10px;
 }
 
+.confirm-dialog {
+  width: min(100%, 420px);
+  border: 1px solid #dfe6dc;
+  border-radius: 8px;
+  padding: 24px;
+  background: #ffffff;
+  box-shadow: 0 24px 80px rgba(23, 32, 27, 0.22);
+}
+
+.confirm-dialog h2 {
+  margin: 12px 0 8px;
+  letter-spacing: 0;
+}
+
+.confirm-dialog p {
+  margin: 0 0 20px;
+  color: #5d6b62;
+  line-height: 1.6;
+}
+
+.confirm-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: #65460d;
+  background: #f5e6bf;
+  border-radius: 8px;
+}
+
+.confirm-icon.danger {
+  color: #8a2f17;
+  background: #f5dfd9;
+}
+
 .detail-header {
   align-items: flex-end;
 }
@@ -752,6 +796,77 @@ a:hover {
   place-items: center;
   color: #6d7a71;
   font-weight: 700;
+}
+
+.loading-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #5d6b62;
+  font-weight: 800;
+}
+
+.loading-spinner {
+  width: 18px;
+  height: 18px;
+  border: 3px solid #d6e2dc;
+  border-top-color: #246b52;
+  border-radius: 999px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.toast-region {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 40;
+  display: grid;
+  gap: 10px;
+  width: min(360px, calc(100vw - 36px));
+}
+
+.toast {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #dfe6dc;
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+  box-shadow: 0 16px 48px rgba(23, 32, 27, 0.16);
+  font-weight: 800;
+}
+
+.toast-success {
+  color: #24633d;
+}
+
+.toast-error {
+  color: #8a2f17;
+}
+
+.toast button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.toast button:hover {
+  background: #edf2ee;
 }
 
 .error-panel {

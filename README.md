@@ -1,6 +1,6 @@
 # JobTrackr
 
-JobTrackr is a Spring Boot backend API for tracking job applications, interviews, follow-up tasks, notes, and document links. It is built as a portfolio-ready backend project that demonstrates secure REST API design, PostgreSQL persistence, JWT authentication, owner-based authorization, database migrations, OpenAPI documentation, and Docker-backed integration testing.
+JobTrackr is a full-stack job application tracking system for managing applications, interviews, follow-up tasks, notes, documents, and application status history. It is built as a portfolio-ready project that demonstrates secure REST API design, PostgreSQL persistence, JWT authentication, owner-based authorization, database migrations, OpenAPI documentation, Docker-backed integration testing, and a React/TypeScript frontend.
 
 ## Tech Stack
 
@@ -17,6 +17,13 @@ JobTrackr is a Spring Boot backend API for tracking job applications, interviews
 - Swagger / OpenAPI with Springdoc
 - JUnit 5, Mockito, Testcontainers
 - Maven
+- React
+- TypeScript
+- Vite
+- TanStack Query
+- Axios
+- React Router
+- Lucide React
 
 ## Features
 
@@ -36,6 +43,29 @@ JobTrackr is a Spring Boot backend API for tracking job applications, interviews
 - Flyway-managed PostgreSQL schema
 - Swagger UI documentation
 - Unit tests and PostgreSQL integration tests with Testcontainers
+- React frontend with login/register, protected routes, application dashboard, detail view, resource tabs, toast notifications, loading states, and confirmation dialogs
+
+## Screenshots
+
+### Login
+
+![Login screen](images/login.png)
+
+### Applications Dashboard
+
+![Applications dashboard](images/application-dashboard.png)
+
+### Application Detail
+
+![Application detail overview](images/application-detail-overview.png)
+
+### Resource Tabs
+
+![Application resource tabs](images/application-resource-tabs.png)
+
+### Swagger UI
+
+![Swagger UI](images/swagger-ui.png)
 
 ## Architecture
 
@@ -154,6 +184,38 @@ The frontend uses this API base URL by default:
 
 ```txt
 VITE_API_BASE_URL=http://localhost:8080
+```
+
+### Run the Full App Locally
+
+Terminal 1:
+
+```bash
+docker compose up -d
+mvn spring-boot:run
+```
+
+Terminal 2:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open:
+
+```txt
+http://localhost:5173
+```
+
+Create an account from the Register page, then use the app to create applications and manage interviews, tasks, notes, documents, and status changes.
+
+### Frontend Production Build
+
+```bash
+cd frontend
+npm run build
 ```
 
 ## Authentication Flow
@@ -435,10 +497,17 @@ That means Flyway owns schema creation and Hibernate validates that the entity m
 
 ## Testing
 
-Run all tests:
+Run backend tests:
 
 ```bash
 mvn test
+```
+
+Run frontend build verification:
+
+```bash
+cd frontend
+npm run build
 ```
 
 The test suite includes:
@@ -488,13 +557,15 @@ export JWT_SECRET="replace-with-a-long-random-secret"
 ## Resume Summary
 
 ```txt
-JobTrackr - Spring Boot Job Application Management API
-- Built a secure REST API for tracking job applications, interviews, tasks, notes, and document links using Spring Boot and PostgreSQL.
+JobTrackr - Full-Stack Job Application Management System
+- Built a full-stack job application tracker using Spring Boot, PostgreSQL, React, and TypeScript.
+- Designed a secure REST API for tracking job applications, interviews, tasks, notes, document links, and status history.
 - Implemented JWT authentication, BCrypt password hashing, stateless Spring Security, and owner-based authorization.
 - Designed relational JPA entities with Flyway-managed PostgreSQL migrations and DTO validation.
 - Tracked application status transitions with historical audit records.
 - Added filtering, pagination, sorting, global exception handling, and Swagger/OpenAPI documentation.
 - Wrote unit and Docker-backed integration tests using JUnit, Mockito, and Testcontainers.
+- Built a React frontend with protected routes, dashboard filtering/sorting, detail tabs, toast notifications, confirmation dialogs, and loading/error states.
 ```
 
 ## Future Improvements
@@ -503,4 +574,5 @@ JobTrackr - Spring Boot Job Application Management API
 - Task update and reopen endpoints
 - Note update endpoint
 - Role-based admin endpoints
-- React frontend dashboard
+- Docker Compose support for serving the production frontend
+- Hosted deployment

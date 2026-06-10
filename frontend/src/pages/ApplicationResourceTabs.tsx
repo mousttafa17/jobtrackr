@@ -16,9 +16,12 @@ import {
 import { createNote, deleteNote, getNotes } from "../api/notesApi";
 import { completeTask, createTask, deleteTask, getTasks } from "../api/tasksApi";
 import { Button } from "../components/Button";
+import { LoadingState } from "../components/LoadingState";
 import { InputField } from "../components/InputField";
 import { SelectField } from "../components/SelectField";
 import { TextAreaField } from "../components/TextAreaField";
+import { useConfirmDialog } from "../components/ConfirmDialogProvider";
+import { useToast } from "../components/ToastProvider";
 import type {
   CreateInterviewRequest,
   DocumentType,
@@ -86,6 +89,8 @@ const initialInterviewForm: InterviewForm = {
 
 export function InterviewsTab({ applicationId }: { applicationId: number }) {
   const queryClient = useQueryClient();
+  const { confirm } = useConfirmDialog();
+  const { showToast } = useToast();
   const [form, setForm] = useState<InterviewForm>(initialInterviewForm);
   const [error, setError] = useState("");
 
@@ -96,26 +101,50 @@ export function InterviewsTab({ applicationId }: { applicationId: number }) {
 
   const createMutation = useMutation({
     mutationFn: (request: CreateInterviewRequest) => createInterview(applicationId, request),
-    onSuccess: resetAfterSave,
-    onError: (apiError) => setError(getApiErrorMessage(apiError)),
+    onSuccess: () => resetAfterSave("Interview added"),
+    onError: (apiError) => handleFormError(apiError),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, request }: { id: number; request: UpdateInterviewRequest }) =>
       updateInterview(id, request),
-    onSuccess: resetAfterSave,
-    onError: (apiError) => setError(getApiErrorMessage(apiError)),
+    onSuccess: () => resetAfterSave("Interview updated"),
+    onError: (apiError) => handleFormError(apiError),
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteInterview,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["interviews", applicationId] }),
+    onSuccess: () => {
+      showToast("Interview deleted");
+      void queryClient.invalidateQueries({ queryKey: ["interviews", applicationId] });
+    },
+    onError: (apiError) => showToast(getApiErrorMessage(apiError), "error"),
   });
 
-  function resetAfterSave() {
+  function resetAfterSave(message: string) {
     setForm(initialInterviewForm);
     setError("");
+    showToast(message);
     void queryClient.invalidateQueries({ queryKey: ["interviews", applicationId] });
+  }
+
+  function handleFormError(apiError: unknown) {
+    const message = getApiErrorMessage(apiError);
+    setError(message);
+    showToast(message, "error");
+  }
+
+  async function confirmDelete(id: number) {
+    const confirmed = await confirm({
+      title: "Delete interview?",
+      message: "This interview will be removed from the application.",
+      confirmLabel: "Delete",
+      dangerous: true,
+    });
+
+    if (confirmed) {
+      deleteMutation.mutate(id);
+    }
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -200,7 +229,7 @@ export function InterviewsTab({ applicationId }: { applicationId: number }) {
             </div>
             <div className="resource-actions">
               <button type="button" className="icon-button" onClick={() => edit(interview)} aria-label="Edit interview"><Pencil size={18} /></button>
-              <button type="button" className="icon-button" onClick={() => deleteMutation.mutate(interview.id)} aria-label="Delete interview"><Trash2 size={18} /></button>
+              <button type="button" className="icon-button" onClick={() => void confirmDelete(interview.id)} aria-label="Delete interview"><Trash2 size={18} /></button>
             </div>
           </article>
         ))}
@@ -215,6 +244,8 @@ export function InterviewsTab({ applicationId }: { applicationId: number }) {
 
 export function TasksTab({ applicationId }: { applicationId: number }) {
   const queryClient = useQueryClient();
+  const { confirm } = useConfirmDialog();
+  const { showToast } = useToast();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueAt, setDueAt] = useState("");
@@ -228,12 +259,44 @@ export function TasksTab({ applicationId }: { applicationId: number }) {
       setDescription("");
       setDueAt("");
       setError("");
+      showToast("Task added");
       void queryClient.invalidateQueries({ queryKey: ["tasks", applicationId] });
     },
-    onError: (apiError) => setError(getApiErrorMessage(apiError)),
+    onError: (apiError) => {
+      const message = getApiErrorMessage(apiError);
+      setError(message);
+      showToast(message, "error");
+    },
   });
-  const completeMutation = useMutation({ mutationFn: completeTask, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks", applicationId] }) });
-  const deleteMutation = useMutation({ mutationFn: deleteTask, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks", applicationId] }) });
+  const completeMutation = useMutation({
+    mutationFn: completeTask,
+    onSuccess: () => {
+      showToast("Task completed");
+      void queryClient.invalidateQueries({ queryKey: ["tasks", applicationId] });
+    },
+    onError: (apiError) => showToast(getApiErrorMessage(apiError), "error"),
+  });
+  const deleteMutation = useMutation({
+    mutationFn: deleteTask,
+    onSuccess: () => {
+      showToast("Task deleted");
+      void queryClient.invalidateQueries({ queryKey: ["tasks", applicationId] });
+    },
+    onError: (apiError) => showToast(getApiErrorMessage(apiError), "error"),
+  });
+
+  async function confirmDelete(id: number) {
+    const confirmed = await confirm({
+      title: "Delete task?",
+      message: "This task will be removed from the application.",
+      confirmLabel: "Delete",
+      dangerous: true,
+    });
+
+    if (confirmed) {
+      deleteMutation.mutate(id);
+    }
+  }
 
   return (
     <section className="resource-grid">
@@ -255,7 +318,7 @@ export function TasksTab({ applicationId }: { applicationId: number }) {
             </div>
             <div className="resource-actions">
               {!task.completed && <button type="button" className="icon-button" onClick={() => completeMutation.mutate(task.id)} aria-label="Complete task"><CheckCircle2 size={18} /></button>}
-              <button type="button" className="icon-button" onClick={() => deleteMutation.mutate(task.id)} aria-label="Delete task"><Trash2 size={18} /></button>
+              <button type="button" className="icon-button" onClick={() => void confirmDelete(task.id)} aria-label="Delete task"><Trash2 size={18} /></button>
             </div>
           </article>
         ))}
@@ -266,6 +329,8 @@ export function TasksTab({ applicationId }: { applicationId: number }) {
 
 export function NotesTab({ applicationId }: { applicationId: number }) {
   const queryClient = useQueryClient();
+  const { confirm } = useConfirmDialog();
+  const { showToast } = useToast();
   const [content, setContent] = useState("");
   const [error, setError] = useState("");
   const query = useQuery({ queryKey: ["notes", applicationId], queryFn: () => getNotes(applicationId) });
@@ -274,11 +339,36 @@ export function NotesTab({ applicationId }: { applicationId: number }) {
     onSuccess: () => {
       setContent("");
       setError("");
+      showToast("Note added");
       void queryClient.invalidateQueries({ queryKey: ["notes", applicationId] });
     },
-    onError: (apiError) => setError(getApiErrorMessage(apiError)),
+    onError: (apiError) => {
+      const message = getApiErrorMessage(apiError);
+      setError(message);
+      showToast(message, "error");
+    },
   });
-  const deleteMutation = useMutation({ mutationFn: deleteNote, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notes", applicationId] }) });
+  const deleteMutation = useMutation({
+    mutationFn: deleteNote,
+    onSuccess: () => {
+      showToast("Note deleted");
+      void queryClient.invalidateQueries({ queryKey: ["notes", applicationId] });
+    },
+    onError: (apiError) => showToast(getApiErrorMessage(apiError), "error"),
+  });
+
+  async function confirmDelete(id: number) {
+    const confirmed = await confirm({
+      title: "Delete note?",
+      message: "This note will be removed from the application.",
+      confirmLabel: "Delete",
+      dangerous: true,
+    });
+
+    if (confirmed) {
+      deleteMutation.mutate(id);
+    }
+  }
 
   return (
     <section className="resource-grid">
@@ -295,7 +385,7 @@ export function NotesTab({ applicationId }: { applicationId: number }) {
               <strong>{formatDateTime(note.createdAt)}</strong>
               <p>{note.content}</p>
             </div>
-            <button type="button" className="icon-button" onClick={() => deleteMutation.mutate(note.id)} aria-label="Delete note"><Trash2 size={18} /></button>
+            <button type="button" className="icon-button" onClick={() => void confirmDelete(note.id)} aria-label="Delete note"><Trash2 size={18} /></button>
           </article>
         ))}
       </ResourceList>
@@ -305,6 +395,8 @@ export function NotesTab({ applicationId }: { applicationId: number }) {
 
 export function DocumentsTab({ applicationId }: { applicationId: number }) {
   const queryClient = useQueryClient();
+  const { confirm } = useConfirmDialog();
+  const { showToast } = useToast();
   const [name, setName] = useState("");
   const [type, setType] = useState<DocumentType>("RESUME");
   const [url, setUrl] = useState("");
@@ -319,11 +411,36 @@ export function DocumentsTab({ applicationId }: { applicationId: number }) {
       setUrl("");
       setNotes("");
       setError("");
+      showToast("Document added");
       void queryClient.invalidateQueries({ queryKey: ["documents", applicationId] });
     },
-    onError: (apiError) => setError(getApiErrorMessage(apiError)),
+    onError: (apiError) => {
+      const message = getApiErrorMessage(apiError);
+      setError(message);
+      showToast(message, "error");
+    },
   });
-  const deleteMutation = useMutation({ mutationFn: deleteDocument, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["documents", applicationId] }) });
+  const deleteMutation = useMutation({
+    mutationFn: deleteDocument,
+    onSuccess: () => {
+      showToast("Document deleted");
+      void queryClient.invalidateQueries({ queryKey: ["documents", applicationId] });
+    },
+    onError: (apiError) => showToast(getApiErrorMessage(apiError), "error"),
+  });
+
+  async function confirmDelete(id: number) {
+    const confirmed = await confirm({
+      title: "Delete document?",
+      message: "This document link will be removed from the application.",
+      confirmLabel: "Delete",
+      dangerous: true,
+    });
+
+    if (confirmed) {
+      deleteMutation.mutate(id);
+    }
+  }
 
   return (
     <section className="resource-grid">
@@ -349,7 +466,7 @@ export function DocumentsTab({ applicationId }: { applicationId: number }) {
               <p>{document.notes || "No notes"}</p>
               <a href={document.url} target="_blank" rel="noreferrer">Open document <ExternalLink size={14} /></a>
             </div>
-            <button type="button" className="icon-button" onClick={() => deleteMutation.mutate(document.id)} aria-label="Delete document"><Trash2 size={18} /></button>
+            <button type="button" className="icon-button" onClick={() => void confirmDelete(document.id)} aria-label="Delete document"><Trash2 size={18} /></button>
           </article>
         ))}
       </ResourceList>
@@ -370,12 +487,12 @@ function ResourceList({
 }) {
   const items = Array.isArray(children) ? children.filter(Boolean) : children;
   if (isLoading) {
-    return <section className="resource-list muted-panel">Loading...</section>;
+    return <section className="resource-list muted-panel"><LoadingState /></section>;
   }
   if (error) {
     return <section className="form-error">{getApiErrorMessage(error)}</section>;
   }
-  if (Array.isArray(items) && items.length === 0) {
+  if (!items || (Array.isArray(items) && items.length === 0)) {
     return <section className="resource-list muted-panel">{emptyText}</section>;
   }
   return <section className="resource-list">{children}</section>;

@@ -25,9 +25,12 @@ import {
   updateApplicationStatus,
 } from "../api/applicationsApi";
 import { Button } from "../components/Button";
+import { LoadingState } from "../components/LoadingState";
 import { InputField } from "../components/InputField";
 import { SelectField } from "../components/SelectField";
 import { TextAreaField } from "../components/TextAreaField";
+import { useConfirmDialog } from "../components/ConfirmDialogProvider";
+import { useToast } from "../components/ToastProvider";
 import type {
   ApplicationStatus,
   JobApplication,
@@ -73,6 +76,8 @@ export function ApplicationDetailPage() {
   const applicationId = Number(id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { confirm } = useConfirmDialog();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus>("APPLIED");
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -104,6 +109,7 @@ export function ApplicationDetailPage() {
       setFormError("");
       setForm(toFormState(updatedApplication));
       setSelectedStatus(updatedApplication.status);
+      showToast("Application updated");
       void queryClient.invalidateQueries({ queryKey: ["applications"] });
       void queryClient.invalidateQueries({ queryKey: ["application", applicationId] });
       void queryClient.invalidateQueries({
@@ -111,7 +117,9 @@ export function ApplicationDetailPage() {
       });
     },
     onError: (error) => {
-      setFormError(getApiErrorMessage(error));
+      const message = getApiErrorMessage(error);
+      setFormError(message);
+      showToast(message, "error");
     },
   });
 
@@ -122,19 +130,27 @@ export function ApplicationDetailPage() {
       }),
     onSuccess: (updatedApplication) => {
       setSelectedStatus(updatedApplication.status);
+      showToast("Status updated");
       void queryClient.invalidateQueries({ queryKey: ["applications"] });
       void queryClient.invalidateQueries({ queryKey: ["application", applicationId] });
       void queryClient.invalidateQueries({
         queryKey: ["application-status-history", applicationId],
       });
     },
+    onError: (error) => {
+      showToast(getApiErrorMessage(error), "error");
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteApplication(applicationId),
     onSuccess: () => {
+      showToast("Application deleted");
       void queryClient.invalidateQueries({ queryKey: ["applications"] });
       navigate("/applications", { replace: true });
+    },
+    onError: (error) => {
+      showToast(getApiErrorMessage(error), "error");
     },
   });
 
@@ -166,14 +182,25 @@ export function ApplicationDetailPage() {
     updateMutation.mutate(toUpdateRequest(form));
   }
 
-  function confirmDelete() {
-    if (window.confirm("Delete this application? This cannot be undone.")) {
+  async function confirmDelete() {
+    const confirmed = await confirm({
+      title: "Delete application?",
+      message: "This will remove the application and its related records. This cannot be undone.",
+      confirmLabel: "Delete",
+      dangerous: true,
+    });
+
+    if (confirmed) {
       deleteMutation.mutate();
     }
   }
 
   if (applicationQuery.isLoading) {
-    return <main className="centered-page">Loading application...</main>;
+    return (
+      <main className="centered-page">
+        <LoadingState label="Loading application..." />
+      </main>
+    );
   }
 
   if (applicationQuery.isError || !application) {
@@ -204,7 +231,7 @@ export function ApplicationDetailPage() {
             <Pencil size={18} />
             Edit
           </Button>
-          <Button type="button" variant="ghost" onClick={confirmDelete} disabled={deleteMutation.isPending}>
+          <Button type="button" variant="ghost" onClick={() => void confirmDelete()} disabled={deleteMutation.isPending}>
             <Trash2 size={18} />
             {deleteMutation.isPending ? "Deleting..." : "Delete"}
           </Button>
